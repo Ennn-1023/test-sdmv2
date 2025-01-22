@@ -127,7 +127,8 @@ def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
     # mask = input_image["mask"].convert("RGB")
     # image = pad_image(init_image) # resize to integer multiple of 32
     # mask = pad_image(init_mask) # resize to integer multiple of 32
-    width, height = image.size
+    test = np.array(Image.open(image[0]).convert("RGB").resize((512, 512)))
+    width, height = test.size
     print("Inpainting...", width, height)
 
     result = inpaint(
