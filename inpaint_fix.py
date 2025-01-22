@@ -104,6 +104,8 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
                 num_samples,
                 shape,
                 cond,
+                mask=batch["mask"],
+                x0=batch["masked_image"],
                 verbose=False,
                 eta=1.0,
                 unconditional_guidance_scale=scale,
