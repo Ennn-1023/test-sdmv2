@@ -70,7 +70,7 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
     start_code = prng.randn(num_samples, 4, h // 8, w // 8)
     start_code = torch.from_numpy(start_code).to(
         device=device, dtype=torch.float32)
-
+    results = list()
     with torch.no_grad(), \
             torch.autocast("cuda"):
         for image, mask in zip(images, masks):
@@ -116,7 +116,9 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
                                 min=0.0, max=1.0)
 
             result = result.cpu().numpy().transpose(0, 2, 3, 1) * 255
-    return [Image.fromarray(img.astype(np.uint8)) for img in result]
+            results.append(result)
+    out = [Image.fromarray(img.astype(np.uint8)) for img in results]
+    return out
 
 def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
     # image = np.array(Image.open(image).convert("RGB").resize((512, 512)))
