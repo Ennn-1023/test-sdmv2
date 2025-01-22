@@ -163,3 +163,4 @@ cython_debug/
 # IDEs
 .idea/
 .vscode/
+checkpoints/512-inpainting-ema.ckpt

@@ -1,4 +1,4 @@
-import sys
+cimport sys
 import cv2
 import torch
 import numpy as np
@@ -11,7 +11,7 @@ from imwatermark import WatermarkEncoder
 
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import instantiate_from_config
-
+from ldm.models.diffusion.ddpm import LatentInpaintDiffusion
 
 torch.set_grad_enabled(False)
 
