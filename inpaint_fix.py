@@ -36,7 +36,7 @@ def make_batch_sd(
         device,
         num_samples=1):
     image = np.array(Image.open(image).convert("RGB").resize((512, 512)))
-    image = image.astype(np.float32)/255.0
+    image = image.astype(np.float32)/127.5 -1.0
     image = image[None].transpose(0,3,1,2)
     image = torch.from_numpy(image)
 
@@ -70,7 +70,7 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
     start_code = prng.randn(num_samples, 4, h // 8, w // 8)
     start_code = torch.from_numpy(start_code).to(
         device=device, dtype=torch.float32)
-    results = list()
+    results = []
     with torch.no_grad(), \
             torch.autocast("cuda"):
         for image, mask in zip(images, masks):
@@ -116,9 +116,9 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
                                 min=0.0, max=1.0)
 
             result = result.cpu().numpy().transpose(0, 2, 3, 1) * 255
-            results.append(result)
-    out = [Image.fromarray(img.astype(np.uint8)) for img in results]
-    return out
+            print("\nresult shape:", result.shape)
+            results.append(Image.fromarray(result.squeeze(axis=0).astype(np.uint8)))
+    return results
 
 def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
     # image = np.array(Image.open(image).convert("RGB").resize((512, 512)))
@@ -194,7 +194,6 @@ if __name__ == '__main__':
     masks = sorted(os.path.join(opt.inmask, f) for f in os.listdir(opt.inmask))
     images = sorted(os.path.join(opt.inimage, f) for f in os.listdir(opt.inimage))
     print(f"Found {len(masks)} inputs.")
-
     config = OmegaConf.load(opt.config)
     model = initialize_model(opt.config, opt.weights)
     os.makedirs(opt.outdir, exist_ok=True)
