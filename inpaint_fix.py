@@ -10,7 +10,7 @@ from pathlib import Path
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import instantiate_from_config
 
-@st.cache(allow_output_mutation=True)
+
 def initialize_model(config, ckpt):
     config = OmegaConf.load(config)
     model = instantiate_from_config(config.model)
@@ -47,7 +47,7 @@ def make_batch_sd(
     mask[mask >= 0.5] = 1
     mask = torch.from_numpy(mask)
 
-    masked_image = image * (mask < 0.5)
+    masked_image = image #* (mask < 0.5)
 
     batch = {
         "image": repeat(image.to(device=device), "1 ... -> n ...", n=num_samples),
@@ -205,4 +205,4 @@ if __name__ == '__main__':
                       scale=1.0,
                       seed=np.random.randint(0, 1000))
     for result in results:
-        result.save(os.path.join(opt.outdir, masks.pop().split('/')[-1]))
+        result.save(os.path.join(opt.outdir, masks.pop(0).split('/')[-1]))
