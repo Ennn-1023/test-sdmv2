@@ -138,7 +138,7 @@ def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
         sampler=sampler,
         images=image,
         masks=mask,
-        prompt=prompt,
+        prompt="inpaint",
         seed=seed,
         scale=scale,
         ddim_steps=ddim_steps,
