@@ -84,7 +84,7 @@ def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples
             bchw = [num_samples, 4, h // 8, w // 8]
             mask_c = torch.nn.functional.interpolate(batch['mask'], size=bchw[-2:])
             img_c = model.get_first_stage_encoding(
-                        model.encode_first_stage(cc))
+                        model.encode_first_stage(batch['masked_image']))
             for ck in model.concat_keys:
                 cc = batch[ck].float()
                 if ck != model.masked_image_key:
