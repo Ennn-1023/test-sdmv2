@@ -5,7 +5,7 @@ from PIL import Image
 
 
 def resize(image_path, output_path, size):
-    image = Image.open(image).convert("RGB").resize(size)
+    image = Image.open(image_path).convert("RGB").resize(size)
     return image
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
