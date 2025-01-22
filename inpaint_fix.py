@@ -56,7 +56,7 @@ def make_batch_sd(
         "masked_image": repeat(masked_image.to(device=device), "1 ... -> n ...", n=num_samples),
     }
     return batch
-def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512):
+def inpaint(sampler, images, masks, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512):
     device = torch.device(
         "cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = sampler.model
@@ -73,48 +73,49 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1
 
     with torch.no_grad(), \
             torch.autocast("cuda"):
-        batch = make_batch_sd(image, mask, txt=prompt,
-                              device=device, num_samples=num_samples)
+        for image, mask in zip(images, masks):
+            batch = make_batch_sd(image, mask, txt=prompt,
+                                device=device, num_samples=num_samples)
 
-        c = model.cond_stage_model.encode(batch["txt"])
+            c = model.cond_stage_model.encode(batch["txt"])
 
-        c_cat = list()
-        for ck in model.concat_keys:
-            cc = batch[ck].float()
-            if ck != model.masked_image_key:
-                bchw = [num_samples, 4, h // 8, w // 8]
-                cc = torch.nn.functional.interpolate(cc, size=bchw[-2:])
-            else:
-                cc = model.get_first_stage_encoding(
-                    model.encode_first_stage(cc))
-            c_cat.append(cc)
-        c_cat = torch.cat(c_cat, dim=1)
+            c_cat = list()
+            for ck in model.concat_keys:
+                cc = batch[ck].float()
+                if ck != model.masked_image_key:
+                    bchw = [num_samples, 4, h // 8, w // 8]
+                    cc = torch.nn.functional.interpolate(cc, size=bchw[-2:])
+                else:
+                    cc = model.get_first_stage_encoding(
+                        model.encode_first_stage(cc))
+                c_cat.append(cc)
+            c_cat = torch.cat(c_cat, dim=1)
 
-        # cond
-        cond = {"c_concat": [c_cat], "c_crossattn": [c]}
+            # cond
+            cond = {"c_concat": [c_cat], "c_crossattn": [c]}
 
-        # uncond cond
-        uc_cross = model.get_unconditional_conditioning(num_samples, "")
-        uc_full = {"c_concat": [c_cat], "c_crossattn": [uc_cross]}
+            # uncond cond
+            uc_cross = model.get_unconditional_conditioning(num_samples, "")
+            uc_full = {"c_concat": [c_cat], "c_crossattn": [uc_cross]}
 
-        shape = [model.channels, h // 8, w // 8]
-        samples_cfg, intermediates = sampler.sample(
-            ddim_steps,
-            num_samples,
-            shape,
-            cond,
-            verbose=False,
-            eta=1.0,
-            unconditional_guidance_scale=scale,
-            unconditional_conditioning=uc_full,
-            x_T=start_code,
-        )
-        x_samples_ddim = model.decode_first_stage(samples_cfg)
+            shape = [model.channels, h // 8, w // 8]
+            samples_cfg, intermediates = sampler.sample(
+                ddim_steps,
+                num_samples,
+                shape,
+                cond,
+                verbose=False,
+                eta=1.0,
+                unconditional_guidance_scale=scale,
+                unconditional_conditioning=uc_full,
+                x_T=start_code,
+            )
+            x_samples_ddim = model.decode_first_stage(samples_cfg)
 
-        result = torch.clamp((x_samples_ddim + 1.0) / 2.0,
-                             min=0.0, max=1.0)
+            result = torch.clamp((x_samples_ddim + 1.0) / 2.0,
+                                min=0.0, max=1.0)
 
-        result = result.cpu().numpy().transpose(0, 2, 3, 1) * 255
+            result = result.cpu().numpy().transpose(0, 2, 3, 1) * 255
     return [Image.fromarray(img.astype(np.uint8)) for img in result]
 
 def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
@@ -128,13 +129,13 @@ def predict(sampler, image, mask, prompt, ddim_steps, num_samples, scale, seed):
     # image = pad_image(init_image) # resize to integer multiple of 32
     # mask = pad_image(init_mask) # resize to integer multiple of 32
     test = np.array(Image.open(image[0]).convert("RGB").resize((512, 512)))
-    width, height = test.size
+    width, height = (512, 512)
     print("Inpainting...", width, height)
 
     result = inpaint(
         sampler=sampler,
-        image=image,
-        mask=mask,
+        images=image,
+        masks=mask,
         prompt=prompt,
         seed=seed,
         scale=scale,
@@ -199,7 +200,8 @@ if __name__ == '__main__':
                       image=images,
                       mask=masks,
                       prompt="", ddim_steps=opt.steps,
-                      num_samples=len(masks),
+                      num_samples=1,
                       scale=1.0,
                       seed=np.random.randint(0, 1000))
-    results.save(opt.outdir)
+    for result in results:
+        result.save(os.path.join(opt.outdir, masks.pop().split('/')[-1]))
