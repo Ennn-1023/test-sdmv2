@@ -29,13 +29,13 @@ if __name__ == '__main__':
         help="resize image",
         )
     opt = parser.parse_args()
-    inImage = os.listdir(opt.indir)
+    inImage = sorted(os.path.join(opt.indir, f) for f in os.listdir(opt.indir))
     print("resize images in", opt.indir)
     print("output to", opt.outdir)
     os.makedirs(opt.outdir, exist_ok=True)
     for img in inImage:
         image = os.path.join(opt.indir, img)
-        output = os.path.join(opt.outdir, img)
+        output = os.path.join(opt.outdir, img.split('/')[-1])
         resizedImg = resize(image, output, opt.resize)
         resizedImg.save(output)
     print("Resized images saved to", opt.outdir)
